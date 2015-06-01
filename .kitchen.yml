@@ -12,7 +12,7 @@ platforms:
   - name: ubuntu-10.04
   - name: ubuntu-12.04
   - name: ubuntu-14.04
-  - name: centos-6.5
+  - name: centos-6.6
   - name: omnios-r151006c
     driver:
       box: omnios-r151006c
@@ -28,16 +28,55 @@ suites:
       splunk:
         accept_license: true
 
-  - name: server
+  - name: client-inputs-outputs
+    run_list:
+      - recipe[chef-splunk::default]
+      - recipe[test::default]
+    attributes:
+      dev_mode: true
+      splunk:
+        accept_license: true
+        outputs_conf:
+          sslCommonNameToCheck: sslCommonName
+          sslCertPath: $SPLUNK_HOME/etc/certs/cert.pem
+          sslPassword: password
+          sslRootCAPath: $SPLUNK_HOME/etc/certs/cacert.pem
+          sslVerifyServerCert: false
+        inputs_conf:
+          host: localhost
+          ports:
+            - port_num: 123123
+              config:
+                connection_host: dns
+                sourcetype: syslog
+                source: tcp:123123
+
+  - name: server-runas-root
     run_list:
       - recipe[chef-splunk::default]
     attributes:
       dev_mode: true
       splunk:
+        server:
+          runasroot: true
         is_server: true
         accept_license: true
         ssl_options:
           enable_ssl: true
+
+  - name: server-runas-splunk
+    run_list:
+      - recipe[chef-splunk::default]
+    attributes:
+      dev_mode: true
+      splunk:
+        server:
+          runasroot: false
+        is_server: true
+        accept_license: true
+        ssl_options:
+          enable_ssl: true
+        web_port: 8443
 
   - name: disabled
     run_list:

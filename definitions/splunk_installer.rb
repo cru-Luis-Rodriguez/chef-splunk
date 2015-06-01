@@ -3,8 +3,8 @@
 # Cookbook Name:: splunk
 # Definition:: installer
 #
-# Author: Joshua Timberman <joshua@getchef.com>
-# Copyright (c) 2014, Chef Software, Inc <legal@getchef.com>
+# Author: Joshua Timberman <joshua@chef.io>
+# Copyright (c) 2014, Chef Software, Inc <legal@chef.io>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -44,6 +44,10 @@ define :splunk_installer, :url => nil do
 
     file "#{cache_dir}/splunk-response" do
       content 'BASEDIR=/opt'
+    end
+
+    execute "usermod -d #{node['splunk']['user']['home']} splunk" do
+      only_if 'grep -q /home/splunk /etc/passwd'
     end
   end
 

@@ -2,8 +2,8 @@
 # Cookbook Name:: splunk
 # Libraries:: helpers
 #
-# Author: Joshua Timberman <joshua@getchef.com>
-# Copyright (c) 2014, Chef Software, Inc <legal@getchef.com>
+# Author: Joshua Timberman <joshua@chef.io>
+# Copyright (c) 2014, Chef Software, Inc <legal@chef.io>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,8 +30,20 @@ end
 
 def splunk_dir
   # Splunk Enterprise (Server) will install in /opt/splunk.
-  # Splunk Universal Forwarder (not Server) will install in /opt/splunkforwarder
-  node['splunk']['is_server'] ? '/opt/splunk' : '/opt/splunkforwarder'
+  # Splunk Universal Forwarder can be a used as a client or a forwarding
+  # (intermediary) server which installs to /opt/splunkforwarder
+  forwarderpath = '/opt/splunkforwarder'
+  enterprisepath = '/opt/splunk'
+  if node['splunk']['is_intermediate'] == true
+    path = forwarderpath
+    return path
+  elsif node['splunk']['is_server'] == true
+    path = enterprisepath
+    return path
+  else
+    path = forwarderpath
+    return path
+  end
 end
 
 def splunk_auth(auth)

@@ -56,6 +56,7 @@ General attributes:
 * `node['splunk']['web_port']`: The port that the splunkweb service
   listens to. This is set to the default for HTTPS, 443, as it is
   configured by the `setup_ssl` recipe.
+* `node['splunk']['ratelimit_kilobytessec']`: The default splunk rate limiting rate can now easily be changed with an attribute.  Default is 2048KBytes/sec.
 
 The two URL attributes below are selected by platform and architecture
 by default.
@@ -80,6 +81,8 @@ Special attributes for managing the Splunk user:
   chosen and doesn't conflict with anything on the supported platforms
   (see list above). It is within the `system` UID range on Linux
   systems.
+
+* `node['splunk']['server']['runasroot']`: if runasroot is true (which is the splunk upstream package default) then the splunk server runs as root.  If runasroot is false modify the init script to run as the `node['splunk']['user']`.  This does not apply to the splunk client as they may need root permissions to read logfiles.  NOTE1: you may also need to change `node['splunk']['web_port']` on a splunk server to run on a port >1024 if you don't run as root (splunk user cannot bind to privelaged ports).  NOTE2: If you want to switch from root to the splunk user or vice versa on an existing install, please stop the splunk service first before changing the runasroot boolean value.
 
 The following attributes are related to setting up `splunkweb` with
 SSL in the `setup_ssl` recipe.
@@ -106,6 +109,58 @@ SSL in the `setup_ssl` recipe.
   the data bag item. See __Usage__ for instructions. Defaults to
   '`self-signed.example.com.crt`', and should be changed to something
   relevant for the local site before use, in a role or wrapper cookbook.
+
+The following attributes are related to setting up a splunk forwarder
+with the `client` recipe
+
+`node['splunk']['outputs_conf']` is a hash of configuration values that are used to dynamically populate the `outputs.conf` file's "`tcpout:splunk_indexers_PORT`" configuration section. Each key/value pair in the hash is used as configuration in the file. For example the `attributes/default.rb` has this:
+
+```ruby
+default['splunk']['outputs_conf'] = {
+  'forwardedindex.0.whitelist' => '.*',
+  'forwardedindex.1.blacklist' => '_.*',
+  'forwardedindex.2.whitelist' => '_audit',
+  'forwardedindex.filter.disable' => 'false'
+}
+```
+
+This will result in the following being rendered in `outputs.conf`:
+
+```
+[tcpout:splunk_indexers_9997]
+server=10.0.2.47:9997
+forwardedindex.0.whitelist = .*
+forwardedindex.1.blacklist = _.*
+forwardedindex.2.whitelist = _audit
+forwardedindex.filter.disable = false
+```
+
+The `tcpout:splunk_indexers_9997` section is defined by the search results for Splunk Servers, and the `server` directive is a comma-separated listed of server IPs and the ports. For example, to add an `sslCertPath` directive, define the attribute in your role, wrapper cookbook, etc:
+
+```
+node.default['splunk']['outputs_conf']['sslCertPath'] = '$SPLUNK_HOME/etc/certs/cert.pem'
+```
+
+`node['splunk']['inputs_conf']` is a hash of configuration values that are used to populate the `inputs.conf` file.
+
+* `node['splunk']['inputs_conf']['host']`: A string that specifies the
+default host name used in the inputs.conf file. The inputs.conf file
+is not overwritten if this is not set or is an empty string.
+* `node['splunk']['inputs_conf']['ports']`: An array of hashes that contain
+the input port configuration necessary to generate the inputs.conf
+file.
+
+For example:
+```
+node.default['splunk']['inputs_conf']['ports'] = [
+  {
+    port_num => 123123,
+    config => {
+      'sourcetype' => 'syslog'
+    }
+  }
+]
+```
 
 The following attributes are related to upgrades in the `upgrade`
 recipe. **Note** The version is set to 4.3.7 and should be modified to
@@ -182,6 +237,45 @@ node with `splunk_is_server:true` in the same `chef_environment` and
 write out `etc/system/local/outputs.conf` with the server's IP and the
 `receiver_port` attribute in the Splunk install directory
 (`/opt/splunkforwarder`).
+
+Setting node['splunk']['tcpout_server_config_map'] with key value pairs
+updates the outputs.conf server configuration with those key value pairs.
+These key value pairs can be used to setup SSL encryption on messages
+forwarded through this client:
+
+```
+# Note that the ssl CA and certs must exist on the server.
+node['splunk']['tcpout_server_config_map'] = {
+  'sslCommonNameToCheck' => 'sslCommonName',
+  'sslCertPath' => '$SPLUNK_HOME/etc/certs/cert.pem',
+  'sslPassword' => 'password'
+  'sslRootCAPath' => '$SPLUNK_HOME/etc/certs/cacert.pem'
+  'sslVerifyServerCert' => false
+}
+```
+
+The inputs.conf file can also be managed through this recipe if you want to
+setup a splunk forwarder just set the  default host:
+
+```
+node['splunk']['inputs_conf']['host'] = 'myhost'
+```
+Then set up the port configuration for each input port:
+
+```
+node['splunk']['inputs_conf']['ports'] =
+[
+  {
+    port_num => 123123,
+    config => {
+      'sourcetype' => 'syslog',
+      ...
+    }
+  },
+  ...
+]
+```
+
 
 ### default
 
@@ -342,8 +436,8 @@ command. Note the search here is for the splunk server only:
 
 ## License and Authors
 
-- Author: Joshua Timberman <joshua@getchef.com>
-- Copyright 2013, Chef Software, Inc <legal@getchef.com>
+- Author: Joshua Timberman <joshua@chef.io>
+- Copyright 2013, Chef Software, Inc <legal@chef.io>
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

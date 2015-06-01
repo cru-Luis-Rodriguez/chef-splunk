@@ -2,8 +2,8 @@
 # Cookbook Name:: splunk
 # Recipe:: client
 #
-# Author: Joshua Timberman <joshua@getchef.com>
-# Copyright (c) 2014, Chef Software, Inc <legal@getchef.com>
+# Author: Joshua Timberman <joshua@chef.io>
+# Copyright (c) 2014, Chef Software, Inc <legal@chef.io>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -49,7 +49,22 @@ end
 template "#{splunk_dir}/etc/system/local/outputs.conf" do
   source 'outputs.conf.erb'
   mode 0644
-  variables :splunk_servers => splunk_servers
+  variables :splunk_servers => splunk_servers, :outputs_conf => node['splunk']['outputs_conf']
+  notifies :restart, 'service[splunk]'
+end
+
+template "#{splunk_dir}/etc/system/local/inputs.conf" do
+  source 'inputs.conf.erb'
+  mode 0644
+  variables :inputs_conf => node['splunk']['inputs_conf']
+  notifies :restart, 'service[splunk]'
+  not_if { node['splunk']['inputs_conf'].nil? || node['splunk']['inputs_conf']['host'].empty? }
+end
+
+template "#{splunk_dir}/etc/apps/SplunkUniversalForwarder/default/limits.conf" do
+  source 'limits.conf.erb'
+  mode 0644
+  variables :ratelimit_kbps => node['splunk']['ratelimit_kilobytessec']
   notifies :restart, 'service[splunk]'
 end
 

@@ -2,8 +2,8 @@
 # Cookbook Name:: splunk
 # Recipe:: setup_auth
 #
-# Author: Joshua Timberman <joshua@getchef.com>
-# Copyright (c) 2014, Chef Software, Inc <legal@getchef.com>
+# Author: Joshua Timberman <joshua@chef.io>
+# Copyright (c) 2014, Chef Software, Inc <legal@chef.io>
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ end
 
 file "#{splunk_dir}/etc/.setup_#{user}_password" do
   content 'true\n'
-  owner 'root'
-  group 'root'
+  owner node['splunk']['user']['username']
+  group node['splunk']['user']['username']
   mode 00600
 end
